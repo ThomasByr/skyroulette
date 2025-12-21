@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SkyRoulette Discord</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <header class="app-header">
+        <h1>🎰 SkyRoulette</h1>
+        <p class="subtitle">Tirage au sort des timeouts</p>
+    </header>
+
+    <main class="roulette-container">
+        <div class="wheel-area">
+            <div id="wheel" class="roulette-wheel" aria-hidden="true">
+                <div class="wheel-center" aria-hidden="true">🎯</div>
+                <div class="wheel-pointer" aria-hidden="true"></div>
+            </div>
+            <div class="controls">
+                <button id="spin-btn">Lancer</button>
+                <div id="result" class="result" aria-live="polite"></div>
+            </div>
+        </div>
+
+        <section class="history-section">
+            <div class="history-header">
+                <h2>Historique des timeouts</h2>
+                <div class="history-actions">
+                    <div id="clear-history" class=""></div>
+                </div>
+            </div>
+            <ul id="history" class="history-list" aria-live="polite"></ul>
+        </section>
+    </main>
+
+    <script src="/static/roulette.js"></script>
+</body>
+
+</html>

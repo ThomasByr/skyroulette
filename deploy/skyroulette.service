@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=thomas
+User=root
 WorkingDirectory=/root/skyroulette/backend
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/root/skyroulette/backend/.env

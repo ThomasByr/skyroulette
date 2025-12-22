@@ -58,6 +58,37 @@ async def timeout_random():
     )
     # enregistrer avec durée (2 minutes)
     state.register_spin(victim.display_name, minutes=2)
+    # Annoncer le spin et le membre banni dans le channel configuré
+    announce_channel = os.getenv("ANNOUNCE_CHANNEL_ID")
+    if announce_channel:
+        try:
+            channel = bot.get_channel(int(announce_channel))
+            if channel:
+                templates = [
+                    "🎡 La roue tourne... *tic tac* 🎶 {mention} a atterri sur la case PERDU · banni·e {minutes} minutes ! ⏳💥",
+                    "🛑 BOOM ! {mention} a été choisi·e par la destinée — {minutes} minutes de timeout. 🎲",
+                    "🥀 Oh non, {mention}... la roue t'a décidé pour toi. Pause de {minutes} minutes, reviens-nous en un morceau. 😅",
+                    "🏴‍☠️ Par les sabres ! {mention} est envoyé·e au coffre pendant {minutes} minutes. Arrr!",
+                    "✨ Destin accompli : {mention} prend un petit break de {minutes} minutes. Profites-en pour boire un café ☕",
+                    "🎯 Coup de théâtre : {mention} ciblé·e — {minutes} minutes pour méditer ses choix. 🧘",
+                    "🔥 Quelle chaleur ! {mention} se retrouve en cooldown pendant {minutes} minutes. Rafraîchis-toi. ❄️",
+                    "🤖 Système: Randomizer a sélectionné {mention}. Maintenance programmée: {minutes} minutes."
+                ]
+                chosen = random.choice(templates)
+                message = chosen.format(
+                    name=victim.display_name, mention=victim.mention, minutes=2)
+                # Envoyer via la boucle du bot pour éviter "Timeout context manager"
+                try:
+                    bot.loop.create_task(channel.send(message))
+                except Exception:
+                    # Fallback: tenter d'appeler thread-safe
+                    try:
+                        bot.loop.call_soon_threadsafe(
+                            asyncio.create_task, channel.send(message))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
     return victim.display_name
 
 

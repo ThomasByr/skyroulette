@@ -129,7 +129,7 @@ async function loadTopBanned() {
                 <div class="avatar-lg">${initialsFromName(item.member)}</div>
                 <div class="meta-lg">
                     <div class="member-lg">${item.member}</div>
-                    <div class="time-lg">${item.duration_str} cumulées</div>
+                    <div class="time-lg">${item.total_minutes} minutes cumulées</div>
                 </div>
             </div>
         `).join('');

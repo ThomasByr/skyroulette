@@ -8,12 +8,18 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Depends, Request, HTTPException
 from dotenv import load_dotenv
 import state
+import timeouts_store
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 import asyncio
 
 load_dotenv()
+
+# Use SystemRandom for stronger, OS-backed randomness (thread-safe source)
+sysrand = random.SystemRandom()
+# Lock to protect selection & state updates when called concurrently
+selection_lock = threading.Lock()
 
 intents = discord.Intents.default()
 intents.members = True
@@ -53,12 +59,17 @@ async def timeout_random():
     if not candidates:
         return None
 
-    victim = random.choice(candidates)
-    bot.loop.create_task(
-        victim.timeout(timedelta(minutes=2), reason="🎰 Skyroulette Discord")
-    )
-    # enregistrer avec durée (2 minutes)
-    state.register_spin(victim.display_name, minutes=2)
+    # protect selection + registration to avoid races when /spin is called
+    # concurrently from multiple threads/workers
+    with selection_lock:
+        victim = sysrand.choice(candidates)
+        # schedule timeout (non-blocking)
+        bot.loop.create_task(
+            victim.timeout(timedelta(minutes=2),
+                           reason="🎰 Skyroulette Discord")
+        )
+        # enregistrer avec durée (2 minutes)
+        state.register_spin(victim.display_name, minutes=2)
     # Annoncer le spin et le membre banni dans le channel configuré
     announce_channel = os.getenv("ANNOUNCE_CHANNEL_ID")
     if announce_channel:
@@ -75,7 +86,7 @@ async def timeout_random():
                     "🔥 Quelle chaleur ! {mention} se retrouve en cooldown pendant {minutes} minutes. Rafraîchis-toi. ❄️",
                     "🤖 Système: Randomizer a sélectionné {mention}. Maintenance programmée: {minutes} minutes."
                 ]
-                chosen = random.choice(templates)
+                chosen = sysrand.choice(templates)
                 message = chosen.format(
                     name=victim.display_name, mention=victim.mention, minutes=2)
                 # Envoyer via la boucle du bot pour éviter "Timeout context manager"
@@ -132,6 +143,7 @@ async def status():
 async def get_history():
     now = datetime.now(timezone.utc)
     enriched = []
+    guild = bot.get_guild(GUILD_ID)
 
     for entry in state.history:
         ends_at_iso = entry.get("ends_at")
@@ -146,8 +158,20 @@ async def get_history():
         except Exception:
             active = False
 
+        # resolve latest display name if we have a member_id and the guild
+        display = entry.get("member")
+        member_id = entry.get("member_id")
+        if member_id and guild:
+            try:
+                member_obj = guild.get_member(int(member_id))
+                if member_obj:
+                    display = member_obj.display_name
+            except Exception:
+                pass
+
         enriched.append({
-            "member": entry.get("member"),
+            "member": display,
+            "member_id": member_id,
             "time": (
                 datetime.fromisoformat(entry["time"])
                 .replace(tzinfo=timezone.utc)
@@ -173,11 +197,13 @@ async def top_banned(limit: int = 1):
         limit (int): Nombre maximum de membres à retourner (défaut: 1).
     """
     totals = {}
+    guild = bot.get_guild(GUILD_ID)
     for entry in state.history:
-        member = entry.get("member")
+        # prefer aggregating by member_id when available
+        member_key = entry.get("member_id") or entry.get("member")
         starts_iso = entry.get("time")
         ends_iso = entry.get("ends_at")
-        if not member or not starts_iso or not ends_iso:
+        if not member_key or not starts_iso or not ends_iso:
             continue
         try:
             starts = datetime.fromisoformat(starts_iso)
@@ -188,7 +214,7 @@ async def top_banned(limit: int = 1):
                 ends = ends.replace(tzinfo=timezone.utc)
             duration = (ends - starts).total_seconds()
             if duration > 0:
-                totals[member] = totals.get(member, 0) + duration
+                totals[member_key] = totals.get(member_key, 0) + duration
         except Exception:
             continue
 
@@ -203,11 +229,21 @@ async def top_banned(limit: int = 1):
     top_n = sorted_totals[:limit]
 
     results = []
-    for member, total_sec in top_n:
+    for member_key, total_sec in top_n:
         secs = int(total_sec)
         minutes = secs // 60
+        display = member_key
+        # try to resolve member_id -> display name
+        if guild and str(member_key).isdigit():
+            try:
+                mem = guild.get_member(int(member_key))
+                if mem:
+                    display = mem.display_name
+            except Exception:
+                pass
         results.append({
-            "member": member,
+            "member": display,
+            "member_key": member_key,
             "total_seconds": secs,
             "total_minutes": minutes
         })
@@ -220,3 +256,39 @@ def run_bot():
 
 
 threading.Thread(target=run_bot, daemon=True).start()
+
+
+# Migration: update existing history entries with `member_id` when possible
+@bot.event
+async def on_ready():
+    try:
+        guild = bot.get_guild(GUILD_ID)
+    except Exception:
+        guild = None
+
+    if not guild:
+        return
+
+    updated = False
+    for entry in state.history:
+        if entry.get("member_id"):
+            continue
+        name = entry.get("member")
+        if not name:
+            continue
+        # best-effort: try to match display_name or username
+        for m in guild.members:
+            try:
+                if m.display_name == name or m.name == name:
+                    entry["member_id"] = str(m.id)
+                    updated = True
+                    break
+            except Exception:
+                continue
+
+    if updated:
+        try:
+            timeouts_store.save_history(state.history)
+            print("[migration] updated timeouts.json with member_id for some entries")
+        except Exception:
+            print("[migration] failed to save migrated timeouts.json")

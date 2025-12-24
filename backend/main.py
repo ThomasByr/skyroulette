@@ -15,6 +15,11 @@ import asyncio
 
 load_dotenv()
 
+# Use SystemRandom for stronger, OS-backed randomness (thread-safe source)
+sysrand = random.SystemRandom()
+# Lock to protect selection & state updates when called concurrently
+selection_lock = threading.Lock()
+
 intents = discord.Intents.default()
 intents.members = True
 intents.presences = True
@@ -53,12 +58,17 @@ async def timeout_random():
     if not candidates:
         return None
 
-    victim = random.choice(candidates)
-    bot.loop.create_task(
-        victim.timeout(timedelta(minutes=2), reason="🎰 Skyroulette Discord")
-    )
-    # enregistrer avec durée (2 minutes)
-    state.register_spin(victim.display_name, minutes=2)
+    # protect selection + registration to avoid races when /spin is called
+    # concurrently from multiple threads/workers
+    with selection_lock:
+        victim = sysrand.choice(candidates)
+        # schedule timeout (non-blocking)
+        bot.loop.create_task(
+            victim.timeout(timedelta(minutes=2),
+                           reason="🎰 Skyroulette Discord")
+        )
+        # enregistrer avec durée (2 minutes)
+        state.register_spin(victim.display_name, minutes=2)
     # Annoncer le spin et le membre banni dans le channel configuré
     announce_channel = os.getenv("ANNOUNCE_CHANNEL_ID")
     if announce_channel:
@@ -75,7 +85,7 @@ async def timeout_random():
                     "🔥 Quelle chaleur ! {mention} se retrouve en cooldown pendant {minutes} minutes. Rafraîchis-toi. ❄️",
                     "🤖 Système: Randomizer a sélectionné {mention}. Maintenance programmée: {minutes} minutes."
                 ]
-                chosen = random.choice(templates)
+                chosen = sysrand.choice(templates)
                 message = chosen.format(
                     name=victim.display_name, mention=victim.mention, minutes=2)
                 # Envoyer via la boucle du bot pour éviter "Timeout context manager"

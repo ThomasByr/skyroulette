@@ -35,7 +35,13 @@ def can_spin():
     return datetime.utcnow() - last_spin >= timedelta(hours=1)
 
 
-def register_spin(member_name, minutes=2):
+def register_spin(member_name, member_id=None, minutes=2):
+    """Register a spin in memory and persistent store.
+
+    member_id is optional (string). If provided, it's stored alongside the
+    historical display name to allow resolving the latest name later while
+    preserving the original recorded name.
+    """
     global last_spin
     last_spin = datetime.utcnow()
     ends_at = last_spin + timedelta(minutes=minutes)
@@ -44,6 +50,8 @@ def register_spin(member_name, minutes=2):
         "time": last_spin.isoformat(),
         "ends_at": ends_at.isoformat()
     }
+    if member_id is not None:
+        entry["member_id"] = str(member_id)
     history.append(entry)
     try:
         timeouts_store.append_entry(entry)

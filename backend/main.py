@@ -68,8 +68,9 @@ async def timeout_random():
             victim.timeout(timedelta(minutes=2),
                            reason="🎰 Skyroulette Discord")
         )
-        # enregistrer avec durée (2 minutes)
-        state.register_spin(victim.display_name, minutes=2)
+        # enregistrer avec durée (2 minutes) et member_id pour pouvoir
+        # résoudre le membre plus tard même si son display_name change
+        state.register_spin(victim.display_name, str(victim.id), minutes=2)
     # Annoncer le spin et le membre banni dans le channel configuré
     announce_channel = os.getenv("ANNOUNCE_CHANNEL_ID")
     if announce_channel:

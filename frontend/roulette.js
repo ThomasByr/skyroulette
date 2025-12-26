@@ -208,3 +208,25 @@ btn.addEventListener("click", async () => {
         }
     }, SPIN_DURATION_MS);
 });
+
+async function checkStatus() {
+    try {
+        const res = await fetch("/status");
+        if (res.ok) {
+            const data = await res.json();
+            const banner = document.getElementById("happy-hour-banner");
+            if (banner) {
+                if (data.happy_hour) {
+                    banner.classList.remove("hidden");
+                } else {
+                    banner.classList.add("hidden");
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Failed to check status", e);
+    }
+}
+
+checkStatus();
+setInterval(checkStatus, 60000);

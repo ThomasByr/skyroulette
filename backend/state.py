@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+from zoneinfo import ZoneInfo
 
 import timeouts_store
 
@@ -28,11 +29,22 @@ def _load_persistent():
 _load_persistent()
 
 
+def is_happy_hour():
+    """Check if it is currently Happy Hour (17:00 - 18:00 Paris time)."""
+    try:
+        now = datetime.now(ZoneInfo("Europe/Paris"))
+        return 17 <= now.hour < 18
+    except Exception:
+        return False
+
+
 def can_spin():
     global last_spin
     if not last_spin:
         return True
-    return datetime.utcnow() - last_spin >= timedelta(hours=1)
+    
+    limit = timedelta(minutes=5) if is_happy_hour() else timedelta(hours=1)
+    return datetime.utcnow() - last_spin >= limit
 
 
 def register_spin(member_name, member_id=None, minutes=2):

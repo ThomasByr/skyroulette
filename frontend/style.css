@@ -367,3 +367,27 @@ body {
         padding: 8px;
     }
 }
+/* Happy Hour Banner */
+.happy-hour-banner {
+    background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+    color: #5e2a30;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0 20px 0;
+    border-radius: 8px;
+    width: min(920px, calc(100% - 40px));
+    box-shadow: 0 4px 15px rgba(255, 154, 158, 0.4);
+    animation: pulse 2s infinite;
+    font-size: 1.1em;
+}
+
+.happy-hour-banner.hidden {
+    display: none;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}

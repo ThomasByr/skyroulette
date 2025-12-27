@@ -3,7 +3,9 @@ import os
 from zoneinfo import ZoneInfo
 
 import timeouts_store
+from dotenv import load_dotenv
 
+load_dotenv()
 
 online_members = set()
 last_spin = None
@@ -30,10 +32,15 @@ _load_persistent()
 
 
 def is_happy_hour():
-    """Check if it is currently Happy Hour (17:00 - 18:00 Paris time)."""
+    """Check if it is currently Happy Hour (Paris time)."""
+    """By default, Happy Hour is from 17:00 to 18:00 Paris time, but can be
+    customized via environment variables START_HOUR_HAPPY_HOUR and
+    END_HOUR_HAPPY_HOUR (24-hour format)."""
     try:
         now = datetime.now(ZoneInfo("Europe/Paris"))
-        return 17 <= now.hour < 18
+        start_hour = int(os.getenv("START_HOUR_HAPPY_HOUR", 17))
+        end_hour = int(os.getenv("END_HOUR_HAPPY_HOUR", 18))
+        return start_hour <= now.hour < end_hour
     except Exception:
         return False
 
@@ -42,7 +49,7 @@ def can_spin():
     global last_spin
     if not last_spin:
         return True
-    
+
     limit = timedelta(minutes=5) if is_happy_hour() else timedelta(hours=1)
     return datetime.utcnow() - last_spin >= limit
 

@@ -15,6 +15,9 @@ Configuration
 - `DISCORD_TOKEN` : token du bot Discord
 - `GUILD_ID` : identifiant du serveur (entier)
 - `ALLOWED_ORIGIN` (optionnel) : origine autorisée pour les requêtes depuis le frontend, par ex. `http://localhost:8000`. Si défini, le serveur refusera les POST vers `/spin` provenant d'une autre origine.
+- `ANNOUNCE_CHANNEL_ID` : identifiant du canal Discord où poster les annonces de spin (entier)
+- `START_HOUR_HAPPY_HOUR` (optionnel) : heure de début de la Happy Hour (format 24h, par défaut 17)
+- `END_HOUR_HAPPY_HOUR` (optionnel) : heure de fin de la Happy Hour (format 24h, par défaut 18)
 
 Exécution
 - Depuis la racine du projet :

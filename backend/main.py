@@ -52,18 +52,21 @@ async def timeout_random():
     if not candidates:
         return None
 
+    # Determine duration based on Happy Hour
+    duration_minutes = 1 if state.is_happy_hour() else 2
+
     # protect selection + registration to avoid races when /spin is called
     # concurrently from multiple threads/workers
     with selection_lock:
         victim = sysrand.choice(candidates)
         # schedule timeout (non-blocking)
         bot.loop.create_task(
-            victim.timeout(timedelta(minutes=2),
+            victim.timeout(timedelta(minutes=duration_minutes),
                            reason="🎰 Skyroulette Discord")
         )
-        # enregistrer avec durée (2 minutes) et member_id pour pouvoir
+        # enregistrer avec durée et member_id pour pouvoir
         # résoudre le membre plus tard même si son display_name change
-        state.register_spin(victim.display_name, str(victim.id), minutes=2)
+        state.register_spin(victim.display_name, str(victim.id), minutes=duration_minutes)
     # Annoncer le spin et le membre banni dans le channel configuré
     announce_channel = os.getenv("ANNOUNCE_CHANNEL_ID")
     if announce_channel:
@@ -82,7 +85,7 @@ async def timeout_random():
                 ]
                 chosen = sysrand.choice(templates)
                 message = chosen.format(
-                    name=victim.display_name, mention=victim.mention, minutes=2)
+                    name=victim.display_name, mention=victim.mention, minutes=duration_minutes)
                 # Envoyer via la boucle du bot pour éviter "Timeout context manager"
                 try:
                     bot.loop.create_task(channel.send(message))
@@ -130,6 +133,7 @@ async def status():
         "online": len(data.online_members(bot.get_guild(GUILD_ID))),
         "candidates": len(data.candidate_members(bot.get_guild(GUILD_ID))),
         "can_spin": state.can_spin(),
+        "happy_hour": state.is_happy_hour(),
         "history": state.history[-5:]
     }
 

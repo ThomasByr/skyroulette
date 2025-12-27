@@ -32,8 +32,9 @@ _load_persistent()
 
 
 def is_happy_hour():
-    """Check if it is currently Happy Hour (Paris time)."""
-    """By default, Happy Hour is from 17:00 to 18:00 Paris time, but can be
+    """Check if it is currently Happy Hour (Paris time).
+
+    By default, Happy Hour is from 17:00 to 18:00 Paris time, but can be
     customized via environment variables START_HOUR_HAPPY_HOUR and
     END_HOUR_HAPPY_HOUR (24-hour format)."""
     try:

@@ -148,6 +148,7 @@ async def status():
         "happy_hour": state.is_happy_hour(),
         "happy_hour_start": int(os.getenv("START_HOUR_HAPPY_HOUR", 17)),
         "happy_hour_end": int(os.getenv("END_HOUR_HAPPY_HOUR", 18)),
+        "cooldown_seconds": state.seconds_until_next_spin(),
         "history": state.history[-5:]
     }
 

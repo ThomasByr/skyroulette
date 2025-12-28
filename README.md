@@ -76,7 +76,7 @@ sudo systemctl enable --now skyroulette.service
 - Please open an issue or a pull request on the repository explaining your change.
 
 **Acknowledgements / Contributors**
-Thank you to the contributors — add names below:
+Thank you to the contributors:
 - [Thomas Byr](https://github.com/ThomasByr) — fix and improvements to frontend and backend.
 
 **References**

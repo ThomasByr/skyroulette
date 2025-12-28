@@ -13,6 +13,7 @@ const HISTORY_KEY = "skyroulette_history_v1";
 const MAX_DISPLAY = 5;
 
 let history = [];
+let cooldownSeconds = 0;
 
 // bouton activé par défaut
 
@@ -38,6 +39,34 @@ function initialsFromName(name) {
     const parts = name.trim().split(/\s+/);
     return (parts[0][0] || "").toUpperCase() + (parts[1] ? (parts[1][0] || "").toUpperCase() : "");
 }
+
+function formatCooldown(seconds) {
+    if (seconds <= 0) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function updateButtonState() {
+    if (cooldownSeconds > 0) {
+        btn.textContent = `Lancer dans ${formatCooldown(cooldownSeconds)}`;
+        btn.disabled = true;
+        btn.classList.add("cooldown");
+    } else {
+        if (!wheel.classList.contains("spinning")) {
+            btn.textContent = "Lancer maintenant";
+            btn.disabled = false;
+            btn.classList.remove("cooldown");
+        }
+    }
+}
+
+setInterval(() => {
+    if (cooldownSeconds > 0) {
+        cooldownSeconds--;
+        updateButtonState();
+    }
+}, 1000);
 
 function saveLocalHistory() {
     try {
@@ -182,7 +211,7 @@ btn.addEventListener("click", async () => {
                 resultEl.classList.add("success");
 
                 // Rafraîchir depuis le serveur pour récupérer l'historique partagé (et n'afficher que les 5 derniers)
-                setTimeout(() => { loadHistory(); loadTopBanned(); }, 400);
+                setTimeout(() => { loadHistory(); loadTopBanned(); checkStatus(); }, 400);
             } else if (data.status === "cooldown") {
                 resultEl.innerText = "⏳ Roulette en cooldown, réessayez plus tard";
                 resultEl.classList.add("note");
@@ -214,6 +243,12 @@ async function checkStatus() {
         const res = await fetch("/status");
         if (res.ok) {
             const data = await res.json();
+
+            if (typeof data.cooldown_seconds === 'number') {
+                cooldownSeconds = data.cooldown_seconds;
+                updateButtonState();
+            }
+
             const banner = document.getElementById("happy-hour-banner");
             if (banner) {
                 if (data.happy_hour) {

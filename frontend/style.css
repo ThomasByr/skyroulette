@@ -144,6 +144,14 @@ body {
     cursor: not-allowed;
 }
 
+#spin-btn.cooldown {
+    background: linear-gradient(180deg, #4a5568, #2d3748);
+    color: #a0aec0;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
 /* Result */
 .result {
     min-height: 28px;
